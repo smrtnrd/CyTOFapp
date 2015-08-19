@@ -1,7 +1,12 @@
 library(shiny)
 library(shinydashboard)
 
-shinyServer(function(input, output) {
+# By default, the file size limit is 5MB. It can be changed by
+# setting this option. Here we'll raise limit to 9MB.
+options(shiny.maxRequestSize = 100*1024^2)
+
+shinyServer(function(input, output, session) {
+
   #menu on the sidebar
   output$menuitem <- renderMenu({
     menuItem("FCS viewer", icon = icon("calendar"))
@@ -21,8 +26,11 @@ shinyServer(function(input, output) {
     )
     })
 
+  # display 10 rows initially
+  output$ex1 <- renderDataTable(
+    if (is.null(input$FCSfile)) return(NULL) else input$FCSfile,
+    options = list(pageLength = 5))
+
   #Options
-  output$value <- renderText({ input$radio })
-
-
+  output$value <- renderText({input$radio.plot})
   })
