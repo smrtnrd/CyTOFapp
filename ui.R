@@ -1,8 +1,16 @@
 ## ui.R ##
 library(shiny)
 library(shinydashboard)
+library(DT)
+library(tidyr)
+library(flowCore)
 
 source("helpers.R", chdir = TRUE)
+source("FCSviewer.R", chdir = TRUE)
+
+
+outputDir <- "FCSfile"
+filenames <- list.files(outputDir, pattern="\\.fcs$")
 
 shinyUI(fluidPage(
 
@@ -38,29 +46,7 @@ shinyUI(fluidPage(
       # infoBox section
       fluidRow(
         infoBoxOutput("progressBox"),
-        infoBoxOutput("progressBox2"),
-        conditionalPanel(
-          condition = "input.radio.ashin == 'yes'",
-          absolutePanel(
-            bottom = 20, right = 20, width = 300,
-            draggable = TRUE
-            ),
-            fluidRow(
-              column(2,selectInput('x.value', 'X values',
-                                   state.name,
-                                   multiple=TRUE,
-                                   selectize=TRUE)
-              ),
-              column(2,
-                     selectInput('y.value', 'Y values',
-                                 state.name,
-                                 multiple=TRUE,
-                                 selectize=TRUE)
-                )
-              ),
-            style = "opacity: 0.92"
-          )
-
+        infoBoxOutput("progressBox2")
         ),
       fluidRow(
         column(
@@ -70,8 +56,8 @@ shinyUI(fluidPage(
              title = tagList(shiny::icon("line-chart"), "FCS viewer Plot"),
              id = "tabsetPlot1", height = "500px", width = NULL,
              tabPanel("Plot1",
-              textOutput("value"),
-              dataTableOutput('ex1')
+             textOutput("value"),
+             plotOutput("plot1")
 
              ),
              tabPanel("Plot2", "Tab content 2")
@@ -81,8 +67,12 @@ shinyUI(fluidPage(
         column(
           width =4,
           box(
-            title = "Options", height = "250px", width = NULL,
-            fileInput('FCSfile', 'upload your fcs files', multiple = TRUE)
+            title = "Options", height = "350px", width = NULL,
+            fileInput('FCSfile', 'upload your fcs files', multiple = TRUE),
+            uiOutput("selectX"),
+            uiOutput("selectY"),
+            actionButton("plot", "Plot!"),
+            actionButton("reset", "Clear")
             )
           ),
           column(
@@ -90,10 +80,16 @@ shinyUI(fluidPage(
             box(
               height = "200px", width = NULL,
               radioButtons("radio.plot", label = h5("Radio buttons"),
-              choices = list( heatmap = "Heat Map", dotplot = "Dot plot"),
-              selected = "heatmap", inline = TRUE),
+              choices = list("HeatMap", "Dotplot"),
+              selected = "HeatMap", inline = TRUE),
               radioButtons("radio.ashin", label = h5("Asin Transf"),
-              choices = list("yes", "no"), selected = "no", inline = TRUE)
+              choices = list("yes", "no"), selected = "no", inline = TRUE),
+              selectInput(
+                inputId = "dataset",
+                label = "Choose the dataset",
+                choices = filenames
+                )
+
               )
             )
           )

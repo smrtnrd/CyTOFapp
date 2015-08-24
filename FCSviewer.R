@@ -1,32 +1,75 @@
-x <- read.FCS("BM3_1.fcs")
+library(flowCore)
+library(Rtsne)
+library(metricsgraphics)
+library(dplyr)
+library(ggplot2)
 
-e <- exprs(x)
-head(e[,-c(1:2)])
+#test variables
+#default.fcs <- read.FCS("FCSfile/Bendall_et_al_Science_2011_Marrow_1_SurfacePanel_Live_CD44pos_Singlets.fcs")
+#fcs.matrix <- exprs(default.fcs)
+#fcs.df <- as.data.frame.matrix(fcs.matrix)
+#smoothScatterPlot(fcs.df, "Rh(102.905)-Dual", "Dy(163.929)-Dual")
+#dotPlot(fcs.df, "Rh(102.905)-Dual", "Dy(163.929)-Dual")
+#X.channel <- "Rh(102.905)-Dual"
+#Y.channel <- "Dy(163.929)-Dual"
 
-asinh.scale <- 5
-et <- e
-et[,-c(1:2)] <- asinh(et[,-c(1:2)] / asinh.scale)
+#produce an heat map
+smoothScatterPlot <- function(fcs.df, X.channel, Y.channel){
+  #for debbuging 
+  print(X.channel)
+  print(Y.channel)
+  
+  var <- c(X.channel, Y.channel)
 
-p <- colorRampPalette(c("blue", "orange", "red"),space = "Lab")
-   smoothScatter( e[,cl], asinh(e[,dc[i]]), nrpoints=0,
-                  xlab="Event length", ylab=dc[i], colramp=p)
-   points( e[k,cl], asinh(e[k,dc[i]]), pch=".", col="white")
+  #data frame manipulation
+  df <-   fcs.df %>%
+          sample_n(5e4) %>%
+          select(one_of(var)) %>%
+          mutate_each(funs(asinh))
 
+  #prepare the df for ploting
+  x <- df[[X.channel]]
+  y <- df[[Y.channel]]
+  
+  #data frame for ploting, adding a collor pallette
+  df.plot <- data.frame( x, y, 
+                    d = densCols(x, y, 
+                    colramp = colorRampPalette(c("blue", "orange", "red"),
+                    space = "Lab")))
+  print(tbl_df(df.plot))
+  
+  p <- ggplot(df.plot) +
+  geom_point(aes(x, y, col = d), size = 1) +
+  scale_color_identity() +
+  theme_bw()
+  
+  print(p)
+}
 
-nm <- as.character(x@parameters@data$desc)
-dna <- grep("DNA",nm)
-bead <- grep("bead",nm)
-
-qs <- round(t(apply(et,2,quantile, p=c(.001,.999) )),3)
-
-s <- sample( nrow(et), 5e4)
-
-pdf("a.pdf",w=(length(dna)+1)*5,h=5);
-par(mfrow=c(1,3))
-smoothScatter( et[s,"Time"], jitter(et[s,"Event_length"],amount=.3),
-              xlab="Time", ylab="Event_length", nrpoints=0, colramp=p);
-for(i in dna)
- smoothScatter( jitter(et[s,"Event_length"], amount=.3), et[s,i],
-                pch=".", nrpoints=0, colramp=p, ylim=qs[i,],
-                xlab="Event_length", ylab=paste0(colnames(et)[i], " // ", nm[i]))
-dev.off()
+#produce dot plot for bins
+dotPlot <- function(fcs.df, X.channel, Y.channel){
+  #for debbuging 
+  print(X.channel)
+  print(Y.channel)
+  
+  var <- c(X.channel, Y.channel)
+  
+  #data frame manipulation
+  df <-   fcs.df %>%
+    sample_n(5e4) %>%
+    select(one_of(var)) %>%
+    mutate_each(funs(asinh))
+  
+  #prepare the df for ploting
+  x <- df[[X.channel]]
+  y <- df[[Y.channel]]
+  
+  df.plot <- data.frame(x,y)
+  
+  print(tbl_df(df.plot))
+  
+  p <- ggplot(df.plot, aes(x, y))+
+  geom_jitter(position = position_jitter(width=.1)) +
+  theme_bw()
+  print(p)
+}

@@ -10,34 +10,51 @@ library(shinydashboard)
 
 # get current options
 
+#Global variable
+outputDir <- "FCSfile"
+
+
 setCurrentOption <- function(caption){
   if(caption == "Heat Map"){
     return("Heat Map")
   }else{
     return("Dot Plot")
   }
-
 }
 
-outputDir <- "responses"
+#####
+#
+# Manipulate files
+#
+####
 
-saveData <- function(data) {
-  data <- t(data)
-  # Create a unique file name
-  fileName <- sprintf("%s_%s.csv", as.integer(Sys.time()), digest::digest(data))
-  # Write the file to the local system
-  write.csv(
-    x = data,
-    file = file.path(outputDir, fileName),
-    row.names = FALSE, quote = TRUE
-  )
+#add file to the Dataset
+saveDataTemp <- reactive({
+    #TODO(not urgent): add a message to user that he needs add a file
+    if(is.null(input$FCSfile)){return(data.frame())}
+    FCS.file <- input$FCSfile
+    write.FCS (
+      x = FCS.file,
+      file = file.path(outputDir, FCS.file$name)
+      )
+  })
+
+filenames <- function(){
+    list.files(outputDir, pattern="\\.fcs$")
 }
 
-loadData <- function() {
-  # Read all the files into a list
+
+Dataset <- reactive({
+  # Read all files into a list
   files <- list.files(outputDir, full.names = TRUE)
-  data <- lapply(files, read.csv, stringsAsFactors = FALSE)
+  dataset <- lapply(files, read.FCS, stringsAsFactors = FALSE)
   # Concatenate all data together into one data.frame
-  data <- do.call(rbind, data)
-  data
+  # data <- do.call(rbind, data)
+  return(dataset)
+})
+
+getFCS <- function(file){
+    fcs.file <- read.FCS(file)
+    fcs.matrix <- exprs(fcs.file)
+    return(fcs.matrix)
 }
