@@ -66,15 +66,15 @@ body <- dashboardBody(
                                        multiple = TRUE),
                             uiOutput("selectFiles"),
                             hr(),
-                            actionButton("apply_modif", "Apply Modification")),
-                      column(width =4,
-                             box( width = NULL,
-                             radioButtons("Plot Setting",
-                                          label = h5("Radio buttons"),
-                                          choices = list("HeatMap", "Dotplot"),
-                                          selected = "HeatMap",
-                                          inline = TRUE)))
-                             )
+                            actionButton("apply_modif", "Apply Modification", width = "100%")),
+                            hr(),
+                            box( "Option plot", width = NULL,
+                            radioButtons("Plot Setting",
+                                         label = h5("Radio buttons"),
+                                         choices = list("HeatMap", "Dotplot"),
+                                         selected = "HeatMap",
+                                         inline = TRUE)))
+
         )
       )
     )

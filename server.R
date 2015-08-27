@@ -47,7 +47,7 @@ save_dataset <- function(filename){
                                                      df = sd.df,
                                                      X_channel = sd.colnames,
                                                      Y_channel = sd.colnames))
-
+   cat(paste("getFlowFrame ", , " is bizare \n"))
 
 }
 
@@ -62,30 +62,25 @@ shinyServer(function(input, output, session) {
                       rb = "HeatMap",
                       selected_input_file = NULL )
 
-  # reactive data.frame will contain files
-  # this object is going to be manipulate trough
-  # all the Module
-
-  user_data <- list(plotID = "",
-                    X_channel = "",
-                    Y_channel = "",
-                    df = NULL)
 
   # give us the object flowFrame
-  getFlowFrame <- reactive({
-    #cat(paste( "getFlowFrame ", input$select_files, " is selected \n"))
-    #check that the user selected an input
-    if(is.null(input$select_files)) return()
-    v$selected_input_file <- input$select_files
-    #cat(paste( " if getFlowFrame ", input$select_files, " is selected \n"))
-    #check that the filename exist in the session
-    if((v$selected_input_file %in% user_dataset_names)) return()
-    filename <- v$selected_input_file
-    cat(paste("getFlowFrame ",filename, " is bizare \n"))
-    fcs.flowFrame <- user_session[[filename]][paste("df")]
-    cat(paste("getFlowFrame ",colnames(fcs.flowFrame), " is bizare \n"))
-    return(fcs.flowFrame)
-    })
+getFlowFrame <- reactive({
+  # check that the user selected an input
+  if(is.null(input$select_files)){
+      return()
+    } else {
+      cat("getFlowFrame if \n")
+      cat(paste(outputDir, "/", input$select_files))
+      default.fcs <- read.FCS(paste(outputDir, "/", input$select_files, sep = ""))
+      cat("getFlowFrame fcs file \n")
+
+      fcs.matrix <- exprs(default.fcs)
+      cat("getFlowFrame X \n")
+      fcs.df <- as.data.frame.matrix(fcs.matrix)
+      v$df <- fcs.df
+      return(fcs.df)
+    }
+})
 
 
 
@@ -103,23 +98,13 @@ shinyServer(function(input, output, session) {
 
   #my idea here is to create an input channel
   observeEvent(input$select_files, {
-     cat(paste( "observeEvent ", input$select_files, " is selected \n"))
-     cat(paste( "user_session ", is.null(input$select_files), " is selected \n"))
-     if(!is.null(input$select_files)) return()
-     v$elected_input_file <- input$select_files
-     cat(paste(v$selected_input_file, " is bizare \n"))
+     v$selected_input_file <- input$select_files
      #save the data if it doesn't exist in the data frame
-     if((v$selected_input_file %in% names(user_session))) return()
-     save_dataset(v$selected_input_file)
     })
 
 #Select Channel
   output$selectX <- renderUI({
-    cat("output X \n")
     #check if the user has selected a dataset
-    if(is.null(input$select_files)) return()
-    #if(!(v$selected_input_file %in% names(user_session))) return()
-    cat("output X if selected \n")
     selectInput("Xchannel",
     "Select your X channel",
     size = 4,
@@ -156,8 +141,6 @@ shinyServer(function(input, output, session) {
 
 
   output$selectY <- renderUI({
-    if(is.null(input$select_files)) return()
-    #if(!(v$selected_input_file %in% names(user_session))) return()
     selectInput("Ychannel",
     "Select your Y channel",
     size = 4,
@@ -190,13 +173,13 @@ shinyServer(function(input, output, session) {
        cat(paste("Plot button : ", v$rb, " was selected"))
        })
 
-  observeEvent(input$reset, {
+observeEvent(input$reset, {
          v$df <- NULL
          v$X <- NULL
          v$Y <- NULL
-      })
+         })
 
-  observeEvent(input$FCSfile, {
+observeEvent(input$FCSfile, {
        #check that the uploaded file equals to FCS
        if(is.null(input$FCSfile)) return()
        inFile <- input$FCSfile
@@ -205,28 +188,22 @@ shinyServer(function(input, output, session) {
        #if((inFile %in% load_files_from_dir()) return()
        add_file_to_dir(inFile$datapath)
        cat("File is added to the directory \n")
-     })
-
+       })
 
 output$plot1 <- renderPlot({
 
     if(v$create_plot == FALSE) return()
-        df = user_session[v$selected_input_file]
+        df = v$df
         X = v$X
         Y = v$Y
     if ( v$rb == "HeatMap"){
           smoothScatterPlot(df, X, Y)
           cat("print heat MAp \n")
-    }else {
+    } else {
           dotPlot(df, X, Y)
           cat("print dot Plot \n")
     }
 })
-
-
-
-
-
 
   #Options
   output$value <- renderText({
