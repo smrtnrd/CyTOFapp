@@ -8,7 +8,7 @@ user_session <- data.table(plotID = character(),
 
 
 #test variables
-default.fcs <- read.FCS( "Bendall_et_al_Science_2011_Marrow_1_SurfacePanel_Live_CD44pos_Singlets.fcs", dir = "/FCSfile")
+default.fcs <- read.FCS("FCSfile/Bendall_et_al_Science_2011_Marrow_1_SurfacePanel_Live_CD44pos_Singlets.fcs")
 fcs.matrix <- exprs(default.fcs)
 fcs.df <- as.data.frame.matrix(fcs.matrix)
 #smoothScatterPlot(fcs.df, "Rh(102.905)-Dual", "Dy(163.929)-Dual")

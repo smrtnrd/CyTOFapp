@@ -4,8 +4,10 @@ source("utils.R")
 source("assets/carouselPanel.R")
 # By default, the file size limit is 5MB. It can be changed by
 # setting this option. Here we'll raise limit to 9MB.
-options(shiny.maxRequestSize = 100*1024^2)
 
+
+
+options(shiny.maxRequestSize = 100*1024^2)
 id <- 1 #index for plot
 outputDir <- "FCSfile" # directory with .fcs files
 user_dataset_names <- list() # store names for the raws
@@ -47,26 +49,30 @@ save_dataset <- function(filename){
                                                      df = sd.df,
                                                      X_channel = sd.colnames,
                                                      Y_channel = sd.colnames))
-   cat(paste("getFlowFrame ", , " is bizare \n"))
+    }
 
-}
 
 shinyServer(function(input, output, session) {
   #####---------
+
+  # Single zoomable plot (on left)
+  ranges <- reactiveValues(x = NULL, y = NULL)
+
+
   # FCS viewer Module
   # reactive values to plot function
   v <- reactiveValues(df = NULL,
                       X = NULL,
                       Y = NULL,
-                      create_plot = FALSE, # action button to plot
-                      rb = "HeatMap",
+                      information = NULL,
+                      plot = NULL, # action button to plot
                       selected_input_file = NULL )
 
 
   # give us the object flowFrame
 getFlowFrame <- reactive({
   # check that the user selected an input
-  if(is.null(input$select_files)){
+  if(is.null(v$selected_input_file)){
       return()
     } else {
       cat("getFlowFrame if \n")
@@ -77,6 +83,7 @@ getFlowFrame <- reactive({
       fcs.matrix <- exprs(default.fcs)
       cat("getFlowFrame X \n")
       fcs.df <- as.data.frame.matrix(fcs.matrix)
+      v$information <- dim(default.fcs)
       v$df <- fcs.df
       return(fcs.df)
     }
@@ -118,25 +125,20 @@ getFlowFrame <- reactive({
 
 
 
-  #my idea here is to create an input channel
-  observeEvent(input$Xchannel, {
-     if(is.null(input$Xchannel)) return()
-     v$X <- input$Xchannel
-     cat("X is selected \n")
-    })
-
   output$transformX <- renderUI({
      selectInput("X_transf",
                  "select a parameter",
                   choices = c("asinh", "no transformation"),
-                  width = "100%")
+                  width = "100%",
+                  selected = "no transformation" )
     })
 
  output$transformY <- renderUI({
    selectInput("Y_transf",
                "select a function",
                 choices = c("asinh", "no transformation"),
-                width ="100%")
+                width ="100%",
+                selected = "no transformation" )
    })
 
 
@@ -150,36 +152,8 @@ getFlowFrame <- reactive({
     )
   })
 
-  observeEvent(input$Ychannel, {
-     if(is.null(input$Ychannel)) return()
-      v$Y <- input$Ychannel
-      cat("Y is selected \n")
-    })
 
-
-
-
-    # action button for creating the plot
-    observeEvent(input$apply_modif, {
-     v$create_plot <- input$apply_modif
-     cat("create a PLOT \n")
-    })
-
-
-    observeEvent(input$radio.plot, {
-       if(v$rb == as.character(input$radio.plot) ) return()
-       v$rb <- as.character(input$radio.plot)
-       cat("Plot button was selected \n")
-       cat(paste("Plot button : ", v$rb, " was selected"))
-       })
-
-observeEvent(input$reset, {
-         v$df <- NULL
-         v$X <- NULL
-         v$Y <- NULL
-         })
-
-observeEvent(input$FCSfile, {
+  observeEvent(input$FCSfile, {
        #check that the uploaded file equals to FCS
        if(is.null(input$FCSfile)) return()
        inFile <- input$FCSfile
@@ -190,23 +164,95 @@ observeEvent(input$FCSfile, {
        cat("File is added to the directory \n")
        })
 
-output$plot1 <- renderPlot({
+       # When a double-click happens, check if there's a brush on the plot.
+        # If so, zoom to the brush bounds; if not, reset the zoom.
+        observeEvent(input$plot1_dblclick, {
+          brush <- input$plot1_brush
+          if (!is.null(brush)) {
+            ranges$x <- c(brush$xmin, brush$xmax)
+            ranges$y <- c(brush$ymin, brush$ymax)
 
-    if(v$create_plot == FALSE) return()
-        df = v$df
-        X = v$X
-        Y = v$Y
-    if ( v$rb == "HeatMap"){
-          smoothScatterPlot(df, X, Y)
-          cat("print heat MAp \n")
-    } else {
-          dotPlot(df, X, Y)
-          cat("print dot Plot \n")
+          } else {
+            ranges$x <- NULL
+            ranges$y <- NULL
+          }
+        })
+
+doPlots <- eventReactive(input$apply_modif,{
+    sample_n <- 5e4
+    if (as.numeric(v$information[[1]]) < 5e4){
+      sample_n <- round(0.8 * v$information[1], 1)
     }
-})
+ cat(paste("cells :", v$information[[1]], " sample ", sample_n ))
+    # Create a Progress object
+    progress <- shiny::Progress$new()
+    progress$set(message = "Create Plot", value = 0)
 
-  #Options
-  output$value <- renderText({
-    input$radio.plot
+    # Close the progress when this reactive exits (even if there's an error)
+    on.exit(progress$close())
+        df <- sample_n(v$df, sample_n)
+        X = input$Xchannel
+        Y = input$Ychannel
+
+  #transform the data
+  df.XY <- select(df, one_of(X, Y)) # select column
+
+ isolate({
+   if (input$X_transf == "asinh" ){
+     transform(df.XY, X = asinh(df.XY[X])) # transform each column function
+     cat(paste("\n asinh transformation for the variable " , colnames(df.XY), "\n" ))
+     }
+
+   if (input$Y_transf == "asinh" ){
+     transform(df.XY, Y = asinh(df.XY[Y])) # transform each column function
+     cat(paste("asinh transformation for the variable " , colnames(df.XY), "\n" ))
+     }
+   })
+
+
+
+  # Create a closure to update progress.
+  # Each time this is called:
+  # - If `value` is NULL, it will move the progress bar 1/5 of the remaining
+  #   distance. If non-NULL, it will set the progress to that value.
+  # - It also accepts optional detail text.
+  updateProgress <- function(value = NULL, detail = NULL) {
+    if (is.null(value)) {
+      value <- progress$getValue()
+      value <- value + (progress$getMax() - value) / 5
+      }
+      progress$set(value = value, detail = detail)
+      }
+
+    if(input$plot_Setting == "HeatMap" ){
+            v$plot <- smoothScatterPlot(df.XY,X,Y, updateProgress)
+        } else {
+            v$plot <- dotPlot(df.XY, X, Y, updateProgress)
+        }
+      return(v$plot)
+  })
+
+output$plot1 <- renderPlot({
+   # Re-run when button is clicked
+      doPlots() +
+      coord_cartesian(xlim = ranges$x, ylim = ranges$y)
+
+    })
+  #output information
+  output$info_data_xy <- renderText({
+    xy_range_str <- function(e) {
+      if(is.null(e)) return("Select variable on the plot\n")
+      paste0("X min= ", round(e$xmin, 1), " X max= ", round(e$xmax, 1),
+             " Y min= ", round(e$ymin, 1), " Y max= ", round(e$ymax, 1))
+    }
+    paste0("Gate selected : ", xy_range_str(input$plot1_brush), "\n" )
+
+    })
+    #Options
+  output$info_data_plot <- renderText({
+
+    if(is.null(input$select_files)) return()
+      paste0("Dataset :", v$information[[1]], " cells and ",v$information[[2]]," observables \n")
+
     })
   })

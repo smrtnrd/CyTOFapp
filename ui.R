@@ -41,8 +41,17 @@ body <- dashboardBody(
                      width = NULL,
                      #uiOutput("plottabs")
                      tabPanel("File name",
-                              plotOutput("plot1"),
+                              plotOutput("plot1",
+                              dblclick = "plot1_dblclick",
+                              brush = brushOpts(
+                              id = "plot1_brush",
+                              resetOnNew = TRUE
+                              ),
+                              ),
+                              p("Double-click on the plot to zoom"),
                               hr(),
+                              textOutput("info_data_plot"),
+                              textOutput("info_data_xy"),
                               hr(),
                               fluidRow(
                                 column( width = 6,
@@ -68,8 +77,8 @@ body <- dashboardBody(
                             hr(),
                             actionButton("apply_modif", "Apply Modification", width = "100%")),
                             hr(),
-                            box( "Option plot", width = NULL,
-                            radioButtons("Plot Setting",
+                            box( "Plot settings", width = NULL,
+                            radioButtons("plot_Setting",
                                          label = h5("Radio buttons"),
                                          choices = list("HeatMap", "Dotplot"),
                                          selected = "HeatMap",
