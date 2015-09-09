@@ -1,115 +1,71 @@
-# Dependent libs
+list.of.packages <-
+  c(
+    "ggplot2", "Rcpp", "metricsgraphics","RColorBrewer", "dplyr", "flowCore", "tidyr",
+    "Rtsne","shiny","shinyFiles", "Cairo"
+  )
+new.packages <-
+  list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if (length(new.packages))
+  install.packages(new.packages)
+
+
 library(metricsgraphics)
+library(RColorBrewer)
 library(dplyr)
 library(DT)
 library(ggplot2)
 library(flowCore)
 library(tidyr)
 library(Rtsne)
+library(shiny)
+library(shinyFiles)
+library(Cairo)   # For nicer ggplot2 output when deployed on Linux
+library(shinydashboard)
+library(shinyBS)
 
+outputDir <- "data" # directory with .fcs files
+user_dataset_names <- list() # store filenames for the raws
 
-
-# This function takes a number and returns a compressed string (e.g. 1624 => 1.6K or 2K, depending on round.by)
-compress <- function(x, round.by = 2) {
-  # by StackOverflow user 'BondedDust' : http://stackoverflow.com/a/28160474
-  div <- findInterval(as.numeric(gsub("\\,", "", x)), c(1, 1e3, 1e6, 1e9, 1e12) )
-  paste(round( as.numeric(gsub("\\,","",x))/10^(3*(div-1)), round.by), c("","K","M","B","T")[div], sep = "" )
+#return filenames in
+#' Title
+#'
+#' @return
+#' @export
+#'
+#' @examples
+load_files_from_dir <- function() {
+  filenames <-
+    list.files(outputDir, pattern = "*.fcs$") # list of filenames
+  user_dataset_names <- c(user_dataset_names, filenames)
+  return(user_dataset_names)
 }
 
-# TODO: create a function transform_data
-
-# Use ggplot2 to create dot plot
-smoothScatterPlot <- function(fcs.df, X_channel, Y_channel, updateProgress = NULL ){
-
-  Sys.sleep(0.25)
-
-  # If we were passed a progress update function, call it
-  if (is.function(updateProgress)) {
-    text <- paste0( "10%")
-    updateProgress(detail = text)
-  }
-
-  if (is.function(updateProgress)) {
-        text <- paste0("20%")
-        updateProgress(detail = text)
-  }
-
-  Sys.sleep(0.25)
-  # data frame for ploting, adding a collor pallette
-
-  x <- fcs.df[[X_channel]]
-  y <- fcs.df[[Y_channel]]
-
-  if (is.function(updateProgress)) {
-    text <- paste0("30%")
-    updateProgress(detail = text)
-  }
-
-  Sys.sleep(0.25)
-
-  df.plot <- data.frame( x, y,
-                    d = densCols(x, y,
-                    colramp = colorRampPalette(c("blue", "orange", "red"),
-                    space = "Lab")))
-
-
-                    if (is.function(updateProgress)) {
-                      text <- paste0("50%")
-                      updateProgress(detail = text)
-                    }
-  Sys.sleep(0.25)
-  # create the plot
-  heat_map_plot <- ggplot(df.plot) +
-  geom_point(aes(x, y, col = d), size = 1) +
-  labs(x = X_channel, y = Y_channel ) +
-  scale_color_identity() +
-  theme_bw()
-
-  if (is.function(updateProgress)) {
-    text <- paste0("70%")
-    updateProgress(detail = text)
-  }
-
-  Sys.sleep(0.25)
-  if (is.function(updateProgress)) {
-    text <- paste0( " Heat Map Created")
-    updateProgress(detail = text)
-  }
-
-  return(heat_map_plot)
-
+removeFiles <- function(filename) {
+  unlink(filename, recursive = F, force = F)
+  #file.remove(filename)
 }
 
-# Use ggplot2 to create dot plot
-dotPlot <- function(fcs.df, X_channel, Y_channel, updateProgress = NULL){
-  #prepare the df for ploting
-  x <- fcs.df[[X_channel]]
-  y <- fcs.df[[Y_channel]]
 
-  df.plot <- data.frame(x,y)
-
-  Sys.sleep(0.25)
-  if (is.function(updateProgress)) {
-    text <- paste0( "50%")
-    updateProgress(detail = text)
+#' Title
+#'
+#' @param file 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+getFlowFrame <- function(file) {
+  # check that the user selected an input
+  if (is.null(file)) {
+    return()
+  }else{
+    default.fcs <-
+      read.FCS(paste(outputDir, "/", input$select_files, sep = ""))
+    fcs.matrix <- exprs(default.fcs)
+    fcs.df <- as.data.frame.matrix(fcs.matrix)
+    information <- dim(default.fcs)
+    
+    return(v$df)
   }
-
-  p <- ggplot(df.plot, aes(x, y))+
-  geom_jitter(position = position_jitter(width=.1)) +
-  labs(x = X_channel, y = Y_channel ) +
-  theme_bw()
-  Sys.sleep(0.25)
-  if (is.function(updateProgress)) {
-    text <- paste0( "80%")
-    updateProgress(detail = text)
-  }
-
-
-
-  Sys.sleep(0.25)
-  if (is.function(updateProgress)) {
-    text <- paste0( "Dot pot Created")
-    updateProgress(detail = text)
-  }
-  return(p)
 }
+
