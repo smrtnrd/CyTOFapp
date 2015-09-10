@@ -4,7 +4,7 @@ library(shinyFiles)
 library(shinydashboard)
 library(metricsgraphics)
 
-source("assets/FCSviewer.R")
+source("assets/viewer-module.R")
 source("assets/norm-module.R")
 source("utils.R")
 
@@ -20,9 +20,10 @@ sidebar <- dashboardSidebar(
   #TODO(buildman): create reactive component to give feedback to the user
   #Header section
   sidebarMenu(
-    menuItem("FCS viewer", tabName = "FCS_viewer", icon = icon("dashboard")),
     menuItem("Normalisation", tabName = "normFCS",  icon = icon("th") ,
-            badgeLabel = "new", badgeColor = "green")
+             badgeLabel = "new", badgeColor = "green"),
+    menuItem("FCS viewer", tabName = "FCS_viewer", icon = icon("dashboard"))
+    
   )#/sidebarMenu
 )#/dashboardSidebar
 #Body elements for the search visualizations.
