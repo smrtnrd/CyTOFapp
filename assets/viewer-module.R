@@ -1,7 +1,7 @@
 source("utils.R")
 
 #edit file seciton =================================================================
-modalEditFiles <- bsModal("modalEditFiles", "Edit Files", "tabEdit", size = "large",
+modalEditFiles <- bsModal("modalEditFiles", "Files Setting", "tabEdit", size = "large",
         fluidRow(column ( width = 9,
                           selectInput("userDataset",
                                       "Datasest",
@@ -10,16 +10,6 @@ modalEditFiles <- bsModal("modalEditFiles", "Edit Files", "tabEdit", size = "lar
                                       selectize = F,
                                       choices = load_files_from_dir())),
                  column ( width = 3, 
-                          hr(),
-                          shinyFilesButton("files", "   Add    ", "Add FCS files", multiple = T, buttonType = "default",
-                                          class = NULL),
-                          
-                          #tags$div(
-                           # HTML("<button id=\"files\" type=\"button\" 
-                            #     class=\"shinyFiles btn btn-default\" data-title=\"files\" 
-                             #    data-selecttype=\"multiple\">Add File</button>")
-                          #),
-        
                           hr(),
                           actionButton("remove_one_file", "Remove", width = "100%"))))
           
@@ -51,7 +41,7 @@ channelOpt <- bsCollapsePanel("Select Channels",
 channelTransf <- bsCollapsePanel("Channels transformation", 
                                  column( width = 6,
                                          selectInput("X_transf",
-                                                     "transform Y channel",
+                                                     "transform X channel",
                                                      choices = c("asinh", "no transformation"),
                                                      width = "100%",
                                                      selected = "no transformation" )),
@@ -99,13 +89,7 @@ sidebarOptions <- column(width = 4,
                              #textOutput('filepaths'),
                              #textOutput("filepaths"),
                              hr(),
-                             #shinySaveButton('save',
-                             #                'Save file',
-                             #                'Save file as ...',
-                             #                 filetype=list(text=c('fcs','xml'),
-                             #                 picture=c('jpeg', 'jpg'))),
-                             #                 hr(),
-                             #                 textOutput(""),
+                             fileInput('inputFiles', "Add a file", multiple = TRUE, width = "100%"),
                              selectInput("select_files",
                                          h4("Working Files"),
                                          choices = load_files_from_dir(), #output file from de directory
@@ -114,9 +98,9 @@ sidebarOptions <- column(width = 4,
                                          selectize = FALSE,
                                          selected = list()
                              ),
-                             actionButton("tabEdit", "Edit Files", width = "100%"),
+                             actionButton("remove_file", "Remove", width = "100%"),
                              hr(),
-                             actionButton("apply_modif", "Apply Modification", width = "100%")),
+                             actionButton("apply_modif", "Update", width = "100%")),
                          hr(),
                          box( title = "Plot settings", width = NULL,
                               radioButtons("plot_Setting",

@@ -71,14 +71,8 @@ shinyServer(function(input, output, session) {
     information = NULL,
     selected_input_file = NULL,
     input_file = FALSE,
-    messNotif = NULL,
-    index = NULL,
-    nrow.notif = NULL,
-    nrow.task = NULL,
-    tasks = "",
-    notifs = "",
-    sX = NULL,
-    xY = NULL
+    x.channel = NULL,
+    y.channel = NULL
   )
   
   
@@ -123,86 +117,75 @@ shinyServer(function(input, output, session) {
   })
   
   
+  
   # action button ==============================================================
+ 
   
-  shinyFileChoose(
-    input,
-    'files',
-    roots = volumes,
-    session = session,
-
-        restrictions = system.file(package = 'base')
-  )
-  
-  # create a dataset from the input_file
-  Dataset <- reactive({
-    # no file input
-    if (is.null(input$files)) {
-      return(load_files_from_dir())
-    }
+  observeEvent(input$inputFiles,{
     # name size type datapath ===================
-    listFiles <- parseFilePaths(volumes, input$files)
+    listFiles <- input$inputFiles
     lapply(listFiles, function(x) {
-      file.rename(
+      file.copy(
         from = paste0(listFiles$datapath) , to = paste0(getwd(),"/",outputDir,"/",listFiles$name, sep =
                                                           "")
       )
     })
-    v$input_file <- TRUE
-    dataset <- load_files_from_dir()
-    return(dataset)
+    isolate({
+      dataset <- load_files_from_dir()
+      updateSelectInput(session,"select_files",choices = dataset, selected = list())
+      updateSelectInput(session, "Xchannel", choices = list() )
+      updateSelectInput(session, "Ychannel", choices = list() )
+      norm$user.files <- NULL
+      norm$bead.channel <- NULL #list of beads
+      v$list_name <- NULL # dna channel
+      v$df <- NULL
+      v$selected_input_file <- NULL
+    })
   })
   
-  output$filepaths <- renderText({
-    if (v$input_file) {
-      files <- input$files
-      if (length(files) > 1) {
-        paste0("all files were added to the dataset \n")
-      }else{
-        paste0(files$name, "was added to the dataset \n")
-      }
-    } else{
-      paste0("File selected :", input$select_files, "\n")
-    }
-    
-  })
+  
   
   observe({
-    if (!is.null(input$select_files)) {
-      isolate({
-        v$selected_input_file <- input$select_files
-        default.fcs <-
-          read.FCS(paste(outputDir, "/", v$selected_input_file, sep = ""))
+    if (!is.null(input$select_files) || !is.null(v$selected_input_file )) {
+        default.fcs <- read.FCS(paste(outputDir, "/", input$select_files, sep = ""))
         fcs.matrix <- exprs(default.fcs)
         fcs.df <- as.data.frame.matrix(fcs.matrix)
         v$information <- dim(default.fcs)
-        v$list_name <- colnames(fcs.df)
+        isolate({
+          if(is.null(norm$bead.channel) || v$selected_input_file != input$select_files ){
+            v$list_name <- colnames(fcs.df)
+            updateSelectInput(session, "Xchannel", choices = v$list_name , selected = list())
+            updateSelectInput(session, "Ychannel", choices = v$list_name , selected = list())
+          }
+        })
         v$df <- fcs.df
-        updateSelectInput(
-          session, "Xchannel", choices = v$list_name , selected = input$Xchannel
-        )
-        updateSelectInput(
-          session, "Ychannel", choices = v$list_name , selected = input$Ychannel
-        )
-      })
-      
+        v$selected_input_file <- input$select_files
+        }
+    
+  })
+  
+  
+  
+  observe({
+    if(input$remove_file > 0){
+      isolate({
+        filename <- paste0(outputDir,"/",input$select_files, sep = "")
+        removeFiles(filename)
+        updateSelectInput(session, "Xchannel", choices = list())
+        updateSelectInput(session, "Ychannel", choices = list())
+        updateSelectInput(session, "select_files", choices = load_files_from_dir(), selected = list())
+        v$df <- NULL
+        v$X <- NULL
+        v$Y <- NULL
+        v$sample <- NULL
+        v$information <- NULL
+        v$selected_input_file <- NULL
+        })
     }
     
-  
   })
   
   
-  
-  observeEvent(input$remove_one_file,{
-    isolate({
-      filename <- paste0(outputDir,"/",input$userDataset, sep = "")
-      removeFiles(filename)
-      updateSelectInput(session, "Xchannel", choices = list() , selected = list())
-      updateSelectInput(session, "Ychannel", choices = list(), selected = list())
-      updateSelectInput(session, "select_files", choices = load_files_from_dir(), selected = list())
-      updateSelectInput(session, "userDataset", choices = load_files_from_dir(), selected = list())
-    })
-  })
   
   # When a double-click happens, check if there's a brush on the plot.
   # If so, zoom to the brush bounds; if not, reset the zoom.
@@ -218,38 +201,23 @@ shinyServer(function(input, output, session) {
     }
   })
   
-  v1 <- reactiveValues(text = NULL, value = NULL, color = NULL)
-  
+
   doPlots <- eventReactive(input$apply_modif,{
-    # sampling data
-    v1$text <- "Analyzing Data"
-    v1$value <- 10
-    v1$color <- "blue"
+
     
-    addTask(v1$text, v1$value, v1$color, tasks.msg)
-    v$nrow.task <- nrow(tasks.msg)
-    cat("\n plotttting \n")
-    Sys.sleep(0.01)
     
     sample.n <- as.numeric(input$sample_data)
     if (as.numeric(v$information[[1]]) < sample.n) {
       sample.n <- round(0.8 * v$information[1], 0)
     }
     
-    updateTask(
-      id = v$index, value = 20,text = paste("Analizing Data : Sampling"), tasks.msg
-    )
-    Sys.sleep(0.01)
+
     
     # set the variable
     v$sample <- v$df[sample(nrow(v$df), sample.n),]
     v$X <- input$Xchannel
     v$Y <- input$Ychannel
-    
-    updateTask(
-      id = v$index, value = 30,text = paste("Analizing Data : Channel Transormation"), tasks.msg
-    )
-    Sys.sleep(0.01)
+
     
     df.X <- select(v$sample, one_of(v$X))
     df.Y <- select(v$sample, one_of(v$Y))
@@ -262,10 +230,7 @@ shinyServer(function(input, output, session) {
   
   output$plot1 <- renderPlot({
     doPlots()
-    updateTask(
-      id = v$index, value = 50,text = paste("Creating Plot : Setting variable"), tasks.msg
-    )
-    Sys.sleep(0.01)
+
     # setting variable
     if (input$X_transf == "asinh") {
       x <- asinh(v$sample[[v$X]] / 5)
@@ -291,15 +256,6 @@ shinyServer(function(input, output, session) {
                                        ))))
     # plot setting options =======================================================
     if (input$plot_Setting == "HeatMap") {
-      updateTask(
-        id = v$index, value = 100,text = paste("Creating Plot : Heat Map"),tasks.msg
-      )
-      addNotif("Heat Map created", status = "success",notifs.msg)
-      v$nrow.notif < nrow(notifs.msg)
-      Sys.sleep(0.01)
-      
-      
-      
       ggplot(df.plot, aes(x, y, col = d)) +
         #geom_point(alpha = 0.3) +
         geom_jitter(position = position_jitter(width = .8), alpha = 0.3) +
@@ -307,7 +263,6 @@ shinyServer(function(input, output, session) {
         scale_color_identity() +
         theme_bw() +
         coord_cartesian(xlim = ranges$x, ylim = ranges$y)
-      
     }else{
       ggplot(df.plot, aes(x, y)) +
         geom_jitter(position = position_jitter(width = 2), alpha = 0.3) +
@@ -337,6 +292,23 @@ shinyServer(function(input, output, session) {
   })
   
   
+  output$filepaths <- renderText({
+    if (v$input_file) {
+      files <- input$files
+      if (length(files) > 1) {
+        paste0("all files were added to the dataset \n")
+      }else{
+        paste0(files$name, "was added to the dataset \n")
+      }
+    } else{
+      paste0("File selected :", input$select_files, "\n")
+    }
+    
+  })
+  
+  
+  
+  
   
   ##########==================================
   max_plots <- 3
@@ -349,11 +321,13 @@ shinyServer(function(input, output, session) {
     information = NULL
   ) #list of file
   
-  isolate({
-    shinyFileChoose(input, 'normfiles', 
-                  roots=c(root='.', volume = getVolumes() ), session=session, 
-                  restrictions=system.file(package='base'))
-  })
+
+  
+  
+  
+  
+  
+  
   
   observeEvent(input$normFiles,{
     # name size type datapath ===================
@@ -386,8 +360,7 @@ shinyServer(function(input, output, session) {
       fcs.matrix <- exprs(default.fcs)
       fcs.df <- as.data.frame.matrix(fcs.matrix)
       norm$information <- dim(default.fcs)
-      cat(paste0("fcs.df : ", head(fcs.df), "\n"))
-       
+
       isolate({
         if(is.null(norm$bead.channel) || norm$user.files != input$userFiles ){
           norm$bead.channel <- colnames(fcs.df)
