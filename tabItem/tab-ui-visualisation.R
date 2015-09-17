@@ -1,5 +1,3 @@
-source("utils.R")
-
 #edit file seciton =================================================================
 modalEditFiles <- bsModal("modalEditFiles", "Files Setting", "tabEdit", size = "large",
         fluidRow(column ( width = 9,
@@ -8,7 +6,7 @@ modalEditFiles <- bsModal("modalEditFiles", "Files Setting", "tabEdit", size = "
                                       width = "100%",
                                       size = 10,
                                       selectize = F,
-                                      choices = load_files_from_dir())),
+                                      choices = list.files("data", pattern = "*.fcs$"))),
                  column ( width = 3, 
                           hr(),
                           actionButton("remove_one_file", "Remove", width = "100%"))))
@@ -85,14 +83,11 @@ panelPlot <- column(width = 8,
 
 sidebarOptions <- column(width = 4,
                          box(title = "File/Sample name", width = NULL, #file/sample name
-                             
-                             #textOutput('filepaths'),
-                             #textOutput("filepaths"),
                              hr(),
                              fileInput('inputFiles', "Add a file", multiple = TRUE, width = "100%"),
                              selectInput("select_files",
                                          h4("Working Files"),
-                                         choices = load_files_from_dir(), #output file from de directory
+                                         choices = list.files("data", pattern = "*.fcs$"), #output file from de directory
                                          size = 10,
                                          width = "100%",
                                          selectize = FALSE,
@@ -109,7 +104,7 @@ sidebarOptions <- column(width = 4,
                                            selected = "HeatMap",
                                            inline = TRUE)))
 
-fcsViewer <- tabItem(tabName = "FCS_viewer",
+fcs_tab <- tabItem(tabName = "fcs_tab",
                      fluidPage(
                        fluidRow(panelPlot,
                                 sidebarOptions )))

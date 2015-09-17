@@ -1,38 +1,85 @@
-## ui.R #
-library(shiny)
-library(shinyFiles)
-library(shinydashboard)
-library(metricsgraphics)
+# Define generic graphic-type select UI.
 
-source("assets/viewer-module.R")
-source("assets/norm-module.R")
-source("utils.R")
 
-# Simple header -----------------------------------------------------------
-dm <- dropdownMenuOutput("messages")
-mm <- dropdownMenuOutput("notifications")
-tm <- dropdownMenuOutput("tasks")
+# ui for selecting the channels
+uichannel <- function(inputId, label, s = 10, ... ){
+  selectInput(inputId, label,
+              choices = list(),
+              width = "100%",
+              size = s, ... )
+}
 
-# Header elements for the visualization
-header <- dashboardHeader(title = "CyTOF Analysiser v.0", dm, mm, tm)
-# Sidebar elements for the search visualizations
+
+# ui for selecting user files (fcs files)
+uifiles <- function(inputId, ... ){
+  selectInput(inputId, label = "Open file(s)", 
+              choices = list.files("data", pattern = "*.fcs$"),
+              selected = list(),  ...
+              )
+}
+
+#ui plot for creating plot function
+uiplots <- function(i){
+  id = paste0("nplot",i, sep="")
+  plotOutput(outputId =  id, 
+             dblclick = paste0("dbclik", i), 
+             brush = brushOpts( id = paste0("plot_brush",i), 
+                                resetOnNew = TRUE )
+             )
+}
+
+################################################################################
+#source header
+source("header/header-ui-dashboard.R", local = TRUE)
+#source body
+source("tabItem/tab-ui-normalisation.R", local = TRUE)
+source("tabItem/tab-ui-visualisation.R", local = TRUE)
+################################################################################
+
+
+################################################################################
+# Define  sidebar  
+################################################################################
+
+norm_menu <- menuItem(
+  "Normalisation", 
+  tabName = "norm_tab", 
+  icon = icon("th") ,
+  badgeLabel = "new", 
+  badgeColor = "green"
+)
+
+fcs_menu <- menuItem(
+  "FCS viewer", 
+  tabName = "fcs_tab", 
+  icon = icon("dashboard")
+)
+
+menu <- sidebarMenu(
+  norm_menu,
+  fcs_menu
+)
+
 sidebar <- dashboardSidebar(
-  #TODO(buildman): create reactive component to give feedback to the user
-  #Header section
-  sidebarMenu(
-    menuItem("Normalisation", tabName = "normFCS",  icon = icon("th") ,
-             badgeLabel = "new", badgeColor = "green"),
-    menuItem("FCS viewer", tabName = "FCS_viewer", icon = icon("dashboard"))
-    
-  )#/sidebarMenu
+  sidebarMenu(menu)#/sidebarMenu
 )#/dashboardSidebar
-#Body elements for the search visualizations.
-body <- dashboardBody(
-  tabItems(normFCS,
-           fcsViewer)
-  
-  )
-  #TODO(Buildman): notification for running process
-  # infoBox section
 
-dashboardPage(header = header, sidebar = sidebar, body = body, skin = "black")
+
+################################################################################
+# Define the body
+################################################################################
+
+# define corresponding tabItem to menu
+tab_items <-  tabItems(
+  norm_tab,
+  fcs_tab
+)
+body <- dashboardBody(tab_items)
+################################################################################
+# Define the full user-interface
+################################################################################
+dashboardPage(
+  header = header, 
+  sidebar = sidebar, 
+  body = body, 
+  skin = "black")

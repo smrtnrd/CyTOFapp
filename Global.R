@@ -1,23 +1,29 @@
-list.of.packages <-
-  c("ggplot2", "Rcpp", "metricsgraphics","RColorBrewer", "dplyr", "flowCore", "tidyr",
-    "Rtsne","shiny","shinyFiles", "Cairo")
-new.packages <-
-  list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
-if (length(new.packages))
-  install.packages(new.packages)
+# load packages
+library("shiny"); packageVersion("shiny")
+library("shinyFiles"); packageVersion("shinyFiles")
+library("shinydashboard"); packageVersion("shinydashboard")
+library("shinyBS"); packageVersion("shinyBS")
+library("shinythemes"); packageVersion("shinythemes")
+library("flowCore"); packageVersion("flowCore")
+library("ggplot2"); packageVersion("ggplot2")
+library("data.table"); packageVersion("data.table")
+library("gridExtra"); packageVersion("gridExtra")
+library("metricsgraphics"); packageVersion("metricsgraphics")
+library("RColorBrewer");packageVersion("RColorBrewer")
+library("dplyr");packageVersion("dplyr")
+library("tidyr");packageVersion("tidyr")
+library("Rtsne");packageVersion("Rtsne")
+library("Cairo"); packageVersion("Cairo")  # For nicer ggplot2 output when deployed on Linux
+# Default options for app startup
+#TODO: source("core/default-parameters.R", local = TRUE)
 
-max_length <- 5
+# For pasting times into things
+simpletime = function(){gsub("\\D", "_", Sys.time())}
 
-library(metricsgraphics)
-library(RColorBrewer)
-library(dplyr)
-library(DT)
-library(ggplot2)
-library(flowCore)
-library(tidyr)
-library(Rtsne)
-library(shiny)
-library(shinyFiles)
-library(Cairo)   # For nicer ggplot2 output when deployed on Linux
-library(shinydashboard)
-library(shinyBS)
+# funciton for moving files 
+move_file <- function(from, to) {
+  todir <- dirname(to)
+  if (!isTRUE(file.info(todir)$isdir))
+    dir.create(todir, recursive = TRUE)
+  file.copy(from = from,  to = to)
+}
