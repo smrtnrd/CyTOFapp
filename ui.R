@@ -71,8 +71,8 @@ sidebar <- dashboardSidebar(
 
 # define corresponding tabItem to menu
 tab_items <-  tabItems(
-  norm_tab,
-  fcs_tab
+  norm_tab #,
+  #fcs_tab
 )
 body <- dashboardBody(tab_items)
 ################################################################################

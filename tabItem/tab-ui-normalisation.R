@@ -12,11 +12,14 @@ source("assets/carouselPanel.R", local = TRUE)
 ################################################################################
 
 # 5 it's arbitrary for the moment 
-nplots <- lapply(1:5, uiplots)
+
+
+#nplots <- lapply(1:5, uiplots)
 # add CarouselPanel
-nplots_carousel <- carouselPanel(do.call(tagList,nplots))
+nplots_carousel <- carouselPanel(uiOutput("plots"))
 # add ConditionalPanel
-nplots_panel <- conditionalPanel(condition = "output.nplot1", nplots_carousel)
+nplots_panel <- nplots_carousel
+  #conditionalPanel(condition = "output.nplot1", nplots_carousel)
 
 
 ################################################################################

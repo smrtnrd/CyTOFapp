@@ -13,7 +13,7 @@ resetData <- reactive({
 })
 
 resetSelectInput <- reactive({
-  updateSelectInput(session,"uselected_file",choices = userData$list_fdirectory , selected = list())
+  updateSelectInput(session,"uselected_file",choices = fileNames() , selected = list())
   updateSelectInput(session, "nbeads_channel", choices = list() )
   updateSelectInput(session, "ndna_channel", choices = list() )
 })
@@ -49,7 +49,7 @@ observeEvent(input$upload_nfile,{
 
 observe ({
   if (!is.null(input$uselected_file) || !is.null(userData$selected_file)) {
-  cat(paste("userData$selected_file : ", userData$selected_file, "\n"))
+  cat(paste("userData$selected_file : ",input$uselected_file, "\n"))
     #create the fcs file
     default.fcs <- read.FCS(paste(outputDir, "/", input$uselected_file, sep = ""))
     fcs.matrix <- exprs(default.fcs)
@@ -74,6 +74,7 @@ observe ({
     userData$selected_file <- input$uselected_files # ! create the files 
     normData$df <- fcs.df
   }else{
+    cat(paste("userData$selected_file : ","input$uselected_file", "\n"))
     toggleModal(session, "norm_options", toggle = "open")
   }
 })
